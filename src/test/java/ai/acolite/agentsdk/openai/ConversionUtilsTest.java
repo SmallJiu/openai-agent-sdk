@@ -7,7 +7,6 @@ import ai.acolite.agentsdk.core.RunToolCallItem;
 import ai.acolite.agentsdk.core.RunToolCallOutputItem;
 import com.openai.models.responses.ResponseInputItem;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /**

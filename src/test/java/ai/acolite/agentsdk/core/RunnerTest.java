@@ -269,10 +269,7 @@ class RunnerTest {
     // Second turn: model returns tool output AND final text
     // This simulates: tool was executed, result added, model responds with final answer
     RunToolCallOutputItem toolOutput =
-        RunToolCallOutputItem.builder()
-            .toolCallId("call-1")
-            .result("Tool result")
-            .build();
+        RunToolCallOutputItem.builder().toolCallId("call-1").result("Tool result").build();
     ModelResponse response2 =
         ModelResponse.builder()
             .usage(turn2Usage)
@@ -324,10 +321,7 @@ class RunnerTest {
 
     // Second response: tool output and final text (loop stops - tool resolved, has final message)
     RunToolCallOutputItem toolOutput =
-        RunToolCallOutputItem.builder()
-            .toolCallId("call-1")
-            .result("Search results")
-            .build();
+        RunToolCallOutputItem.builder().toolCallId("call-1").result("Search results").build();
     ModelResponse response2 =
         ModelResponse.builder()
             .usage(Usage.empty())

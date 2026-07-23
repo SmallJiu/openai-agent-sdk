@@ -8,7 +8,6 @@ import ai.acolite.agentsdk.core.RunToolCallItem;
 import ai.acolite.agentsdk.core.RunToolCallOutputItem;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -43,10 +42,7 @@ class RunItemUtilsTest {
     List<RunItem> items =
         List.of(
             RunToolCallItem.builder().id("call_123").name("calculator").parameters(null).build(),
-            RunToolCallOutputItem.builder()
-                .toolCallId("call_123")
-                .result(42)
-                .build());
+            RunToolCallOutputItem.builder().toolCallId("call_123").result(42).build());
 
     boolean result = RunItemUtils.hasPendingToolCalls(items);
 
@@ -70,14 +66,8 @@ class RunItemUtilsTest {
         List.of(
             RunToolCallItem.builder().id("call_1").name("calculator").parameters(null).build(),
             RunToolCallItem.builder().id("call_2").name("weather").parameters(null).build(),
-            RunToolCallOutputItem.builder()
-                .toolCallId("call_1")
-                .result(42)
-                .build(),
-            RunToolCallOutputItem.builder()
-                .toolCallId("call_2")
-                .result("Sunny")
-                .build());
+            RunToolCallOutputItem.builder().toolCallId("call_1").result(42).build(),
+            RunToolCallOutputItem.builder().toolCallId("call_2").result("Sunny").build());
 
     boolean result = RunItemUtils.hasPendingToolCalls(items);
 
@@ -90,10 +80,7 @@ class RunItemUtilsTest {
         List.of(
             RunToolCallItem.builder().id("call_1").name("calculator").parameters(null).build(),
             RunToolCallItem.builder().id("call_2").name("weather").parameters(null).build(),
-            RunToolCallOutputItem.builder()
-                .toolCallId("call_1")
-                .result(42)
-                .build());
+            RunToolCallOutputItem.builder().toolCallId("call_1").result(42).build());
 
     boolean result = RunItemUtils.hasPendingToolCalls(items);
 
@@ -183,10 +170,7 @@ class RunItemUtilsTest {
         List.of(
             RunMessageOutputItem.builder().content("Hello").role("assistant").build(),
             RunToolCallItem.builder().id("call_123").name("calculator").parameters(null).build(),
-            RunToolCallOutputItem.builder()
-                .toolCallId("call_123")
-                .result(42)
-                .build());
+            RunToolCallOutputItem.builder().toolCallId("call_123").result(42).build());
 
     boolean result = RunItemUtils.hasToolCallOutput(items, "call_123");
 
@@ -202,10 +186,7 @@ class RunItemUtilsTest {
     assertTrue(pendingBefore);
 
     items.add(
-        RunToolCallOutputItem.builder()
-            .toolCallId("call_1")
-            .result(42)
-            .build());
+        RunToolCallOutputItem.builder().toolCallId("call_1").result(42).build());
 
     boolean pendingAfter = RunItemUtils.hasPendingToolCalls(items);
     assertFalse(pendingAfter);
@@ -215,10 +196,7 @@ class RunItemUtilsTest {
   void hasPendingToolCalls_outputBeforeCall_stillFindsMatch() {
     List<RunItem> items =
         List.of(
-            RunToolCallOutputItem.builder()
-                .toolCallId("call_123")
-                .result(42)
-                .build(),
+            RunToolCallOutputItem.builder().toolCallId("call_123").result(42).build(),
             RunToolCallItem.builder().id("call_123").name("calculator").parameters(null).build());
 
     boolean result = RunItemUtils.hasPendingToolCalls(items);
