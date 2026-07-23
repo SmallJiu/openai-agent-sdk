@@ -140,10 +140,7 @@ class RunStateTest {
         RunToolCallItem.builder().id("call_123").name("calculator").parameters(null).build();
     state.addGeneratedItem(toolCall);
     RunToolCallOutputItem toolOutput =
-        RunToolCallOutputItem.builder()
-            .toolCallId("call_123")
-            .result(42)
-            .build();
+        RunToolCallOutputItem.builder().toolCallId("call_123").result(42).build();
     state.addGeneratedItem(toolOutput);
     RunMessageOutputItem message =
         RunMessageOutputItem.builder().content("Response").role("assistant").build();

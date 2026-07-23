@@ -54,10 +54,7 @@ class ConversionUtilsTest {
   @Test
   void convertToResponseInputItems_toolOutput_createsFunctionCallOutput() {
     RunToolCallOutputItem toolOutput =
-        RunToolCallOutputItem.builder()
-            .toolCallId("call_123")
-            .result(42)
-            .build();
+        RunToolCallOutputItem.builder().toolCallId("call_123").result(42).build();
 
     List<ResponseInputItem> result =
         ConversionUtils.convertToResponseInputItems(List.of(toolOutput));
@@ -69,10 +66,7 @@ class ConversionUtilsTest {
   @Test
   void convertToResponseInputItems_toolOutputWithError_usesError() {
     RunToolCallOutputItem toolOutput =
-        RunToolCallOutputItem.builder()
-            .toolCallId("call_123")
-            .result("Tool failed")
-            .build();
+        RunToolCallOutputItem.builder().toolCallId("call_123").result("Tool failed").build();
 
     List<ResponseInputItem> result =
         ConversionUtils.convertToResponseInputItems(List.of(toolOutput));
@@ -97,10 +91,7 @@ class ConversionUtilsTest {
         List.of(
             "User message",
             RunToolCallItem.builder().id("call_1").name("calculator").parameters(null).build(),
-            RunToolCallOutputItem.builder()
-                .toolCallId("call_1")
-                .result(42)
-                .build(),
+            RunToolCallOutputItem.builder().toolCallId("call_1").result(42).build(),
             RunMessageOutputItem.builder().content("Assistant message").role("assistant").build());
 
     List<ResponseInputItem> result = ConversionUtils.convertToResponseInputItems(items);
