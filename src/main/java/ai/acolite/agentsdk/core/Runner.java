@@ -417,7 +417,10 @@ public class Runner extends RunHooks<Object, TextOutput> {
                 RunToolCallOutputItem toolOutput =
                     RunToolCallOutputItem.builder()
                         .toolCallId(handoffCall.getId())
-                        .result(handoffOutput.getError().isPresent() ? handoffOutput.getError().get() : handoffOutput.getToAgent())
+                        .result(
+                                handoffOutput.getError().isPresent()
+                                        ? handoffOutput.getError().get()
+                                        : handoffOutput.getToAgent())
                         .build();
                 state.addGeneratedItem(toolOutput);
                 return CompletableFuture.completedFuture(state);
@@ -557,7 +560,10 @@ public class Runner extends RunHooks<Object, TextOutput> {
                 RunToolCallOutputItem toolOutput =
                     RunToolCallOutputItem.builder()
                         .toolCallId(handoffCall.getId())
-                        .result(outputItem.getError().isPresent() ? outputItem.getError().get() : outputItem.getToAgent())
+                        .result(
+                                outputItem.getError().isPresent()
+                                        ? outputItem.getError().get()
+                                        : outputItem.getToAgent())
                         .build();
                 state.addGeneratedItem(toolOutput);
                 eventEmitter.emit(

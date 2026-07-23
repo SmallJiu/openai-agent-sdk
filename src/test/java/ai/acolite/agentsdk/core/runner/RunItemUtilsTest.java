@@ -115,8 +115,7 @@ class RunItemUtilsTest {
   @Test
   void hasToolCallOutput_noMatchingOutput_returnsFalse() {
     List<RunItem> items =
-        List.of(
-            RunToolCallOutputItem.builder().toolCallId("call_999").result(42).build());
+        List.of(RunToolCallOutputItem.builder().toolCallId("call_999").result(42).build());
 
     boolean result = RunItemUtils.hasToolCallOutput(items, "call_123");
 
@@ -126,8 +125,7 @@ class RunItemUtilsTest {
   @Test
   void hasToolCallOutput_matchingOutput_returnsTrue() {
     List<RunItem> items =
-        List.of(
-            RunToolCallOutputItem.builder().toolCallId("call_123").result(42).build());
+        List.of(RunToolCallOutputItem.builder().toolCallId("call_123").result(42).build());
 
     boolean result = RunItemUtils.hasToolCallOutput(items, "call_123");
 
