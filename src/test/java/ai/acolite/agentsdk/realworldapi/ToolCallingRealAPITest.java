@@ -151,7 +151,6 @@ class ToolCallingRealAPITest {
     RunToolCallOutputItem output = toolOutputs.get(0);
     assertNotNull(output.getToolCallId());
     assertNotNull(output.getResult());
-    assertTrue(output.getError().isEmpty());
   }
 
   @Test

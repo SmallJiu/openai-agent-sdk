@@ -97,9 +97,7 @@ class StreamingTest {
             .orElse(null);
     assertNotNull(toolOutput, "Should find tool output event");
     assertNotNull(toolOutput.getToolCallId());
-    assertTrue(
-        toolOutput.getError().isEmpty() || toolOutput.getResult() != null,
-        "Should have either result or error");
+    assertNotNull(toolOutput.getResult(), "Should have either result or error");
   }
 
   @Test
