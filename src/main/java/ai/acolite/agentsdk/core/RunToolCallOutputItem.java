@@ -1,5 +1,6 @@
 package ai.acolite.agentsdk.core;
 
+import java.util.Optional;
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.jackson.Jacksonized;
@@ -18,4 +19,5 @@ import lombok.extern.jackson.Jacksonized;
 public class RunToolCallOutputItem extends RunItemBase {
   private final String toolCallId;
   private final Object result;
+  private final Optional<String> error;
 }

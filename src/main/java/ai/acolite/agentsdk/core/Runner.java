@@ -414,10 +414,15 @@ public class Runner extends RunHooks<Object, TextOutput> {
                     RunHandoffCallItem.builder().toolCall(handoffCall).sourceAgent(agent).build();
                 state.addGeneratedItem(handoffItem);
                 RunHandoffOutputItem handoffOutput = executeHandoff(state, handoffItem, agent);
+                String toolResult =
+                    handoffOutput.getError().isPresent()
+                        ? "{\"error\": \"" + handoffOutput.getError().get() + "\"}"
+                        : "{\"assistant\": \"" + handoffOutput.getToAgent() + "\"}";
                 RunToolCallOutputItem toolOutput =
                     RunToolCallOutputItem.builder()
                         .toolCallId(handoffCall.getId())
-                        .result(handoffOutput.getError().isPresent() ? handoffOutput.getError().get() : handoffOutput.getToAgent())
+                        .result(toolResult)
+                        .error(handoffOutput.getError())
                         .build();
                 state.addGeneratedItem(toolOutput);
                 return CompletableFuture.completedFuture(state);
@@ -554,10 +559,15 @@ public class Runner extends RunHooks<Object, TextOutput> {
                         .turnIndex(state.getCurrentTurn())
                         .build());
 
+                String toolResult =
+                    outputItem.getError().isPresent()
+                        ? "{\"error\": \"" + outputItem.getError().get() + "\"}"
+                        : "{\"assistant\": \"" + outputItem.getToAgent() + "\"}";
                 RunToolCallOutputItem toolOutput =
                     RunToolCallOutputItem.builder()
                         .toolCallId(handoffCall.getId())
-                        .result(outputItem.getError().isPresent() ? outputItem.getError().get() : outputItem.getToAgent())
+                        .result(toolResult)
+                        .error(outputItem.getError())
                         .build();
                 state.addGeneratedItem(toolOutput);
                 eventEmitter.emit(
@@ -647,7 +657,8 @@ public class Runner extends RunHooks<Object, TextOutput> {
       RunToolCallOutputItem errorOutput =
           RunToolCallOutputItem.builder()
               .toolCallId(toolCall.getId())
-              .result("Tool not found: " + toolCall.getName())
+              .result(null)
+              .error(Optional.of("Tool not found: " + toolCall.getName()))
               .build();
       state.addGeneratedItem(errorOutput);
       return CompletableFuture.completedFuture(null);
@@ -672,6 +683,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
                       RunToolCallOutputItem.builder()
                           .toolCallId(toolCall.getId())
                           .result(guardrailResult.getReplacementContent())
+                          .error(Optional.empty())
                           .build();
                   state.addGeneratedItem(output);
                   return CompletableFuture.completedFuture(null);
@@ -714,6 +726,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
                               RunToolCallOutputItem.builder()
                                   .toolCallId(toolCall.getId())
                                   .result(finalResult)
+                                  .error(Optional.empty())
                                   .build();
                           state.addGeneratedItem(output);
                           return null;
@@ -724,6 +737,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
                   RunToolCallOutputItem.builder()
                       .toolCallId(toolCall.getId())
                       .result(result)
+                      .error(Optional.empty())
                       .build();
               state.addGeneratedItem(output);
               return null;
@@ -740,7 +754,8 @@ public class Runner extends RunHooks<Object, TextOutput> {
               RunToolCallOutputItem errorOutput =
                   RunToolCallOutputItem.builder()
                       .toolCallId(toolCall.getId())
-                      .result(errorMessage)
+                      .result(null)
+                      .error(Optional.of(errorMessage))
                       .build();
               state.addGeneratedItem(errorOutput);
               return null;
@@ -792,7 +807,8 @@ public class Runner extends RunHooks<Object, TextOutput> {
       RunToolCallOutputItem errorOutput =
           RunToolCallOutputItem.builder()
               .toolCallId(toolCall.getId())
-              .result("Tool not found: " + toolCall.getName())
+              .result(null)
+              .error(Optional.of("Tool not found: " + toolCall.getName()))
               .build();
       state.addGeneratedItem(errorOutput);
 
@@ -810,6 +826,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
                   RunToolCallOutputItem.builder()
                       .toolCallId(toolCall.getId())
                       .result(result)
+                      .error(Optional.empty())
                       .build();
               state.addGeneratedItem(output);
 
@@ -832,7 +849,8 @@ public class Runner extends RunHooks<Object, TextOutput> {
               RunToolCallOutputItem errorOutput =
                   RunToolCallOutputItem.builder()
                       .toolCallId(toolCall.getId())
-                      .result(errorMessage)
+                      .result(null)
+                      .error(Optional.of(errorMessage))
                       .build();
               state.addGeneratedItem(errorOutput);
 
@@ -1030,6 +1048,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
             .toolCallId(handoffCallItem.getToolCall().getId())
             .sourceAgent(sourceAgent)
             .targetAgent(targetAgent)
+            .error(Optional.empty())
             .build();
     state.addGeneratedItem(outputItem);
     @SuppressWarnings("unchecked")

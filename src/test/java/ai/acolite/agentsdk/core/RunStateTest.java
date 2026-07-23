@@ -143,6 +143,7 @@ class RunStateTest {
         RunToolCallOutputItem.builder()
             .toolCallId("call_123")
             .result(42)
+            .error(Optional.empty())
             .build();
     state.addGeneratedItem(toolOutput);
     RunMessageOutputItem message =

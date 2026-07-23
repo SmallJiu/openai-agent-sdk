@@ -57,6 +57,7 @@ class ConversionUtilsTest {
         RunToolCallOutputItem.builder()
             .toolCallId("call_123")
             .result(42)
+            .error(Optional.empty())
             .build();
 
     List<ResponseInputItem> result =
@@ -71,7 +72,8 @@ class ConversionUtilsTest {
     RunToolCallOutputItem toolOutput =
         RunToolCallOutputItem.builder()
             .toolCallId("call_123")
-            .result("Tool failed")
+            .result(null)
+            .error(Optional.of("Tool failed"))
             .build();
 
     List<ResponseInputItem> result =
@@ -100,6 +102,7 @@ class ConversionUtilsTest {
             RunToolCallOutputItem.builder()
                 .toolCallId("call_1")
                 .result(42)
+                .error(Optional.empty())
                 .build(),
             RunMessageOutputItem.builder().content("Assistant message").role("assistant").build());
 

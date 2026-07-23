@@ -46,6 +46,7 @@ class RunItemUtilsTest {
             RunToolCallOutputItem.builder()
                 .toolCallId("call_123")
                 .result(42)
+                .error(Optional.empty())
                 .build());
 
     boolean result = RunItemUtils.hasPendingToolCalls(items);
@@ -73,10 +74,12 @@ class RunItemUtilsTest {
             RunToolCallOutputItem.builder()
                 .toolCallId("call_1")
                 .result(42)
+                .error(Optional.empty())
                 .build(),
             RunToolCallOutputItem.builder()
                 .toolCallId("call_2")
                 .result("Sunny")
+                .error(Optional.empty())
                 .build());
 
     boolean result = RunItemUtils.hasPendingToolCalls(items);
@@ -93,6 +96,7 @@ class RunItemUtilsTest {
             RunToolCallOutputItem.builder()
                 .toolCallId("call_1")
                 .result(42)
+                .error(Optional.empty())
                 .build());
 
     boolean result = RunItemUtils.hasPendingToolCalls(items);
@@ -132,6 +136,7 @@ class RunItemUtilsTest {
             RunToolCallOutputItem.builder()
                 .toolCallId("call_999")
                 .result(42)
+                .error(Optional.empty())
                 .build());
 
     boolean result = RunItemUtils.hasToolCallOutput(items, "call_123");
@@ -146,6 +151,7 @@ class RunItemUtilsTest {
             RunToolCallOutputItem.builder()
                 .toolCallId("call_123")
                 .result(42)
+                .error(Optional.empty())
                 .build());
 
     boolean result = RunItemUtils.hasToolCallOutput(items, "call_123");
@@ -160,14 +166,17 @@ class RunItemUtilsTest {
             RunToolCallOutputItem.builder()
                 .toolCallId("call_1")
                 .result(42)
+                .error(Optional.empty())
                 .build(),
             RunToolCallOutputItem.builder()
                 .toolCallId("call_2")
                 .result("result")
+                .error(Optional.empty())
                 .build(),
             RunToolCallOutputItem.builder()
                 .toolCallId("call_3")
                 .result(true)
+                .error(Optional.empty())
                 .build());
 
     boolean hasCall2 = RunItemUtils.hasToolCallOutput(items, "call_2");
@@ -186,6 +195,7 @@ class RunItemUtilsTest {
             RunToolCallOutputItem.builder()
                 .toolCallId("call_123")
                 .result(42)
+                .error(Optional.empty())
                 .build());
 
     boolean result = RunItemUtils.hasToolCallOutput(items, "call_123");
@@ -205,6 +215,7 @@ class RunItemUtilsTest {
         RunToolCallOutputItem.builder()
             .toolCallId("call_1")
             .result(42)
+            .error(Optional.empty())
             .build());
 
     boolean pendingAfter = RunItemUtils.hasPendingToolCalls(items);
@@ -218,6 +229,7 @@ class RunItemUtilsTest {
             RunToolCallOutputItem.builder()
                 .toolCallId("call_123")
                 .result(42)
+                .error(Optional.empty())
                 .build(),
             RunToolCallItem.builder().id("call_123").name("calculator").parameters(null).build());
 
