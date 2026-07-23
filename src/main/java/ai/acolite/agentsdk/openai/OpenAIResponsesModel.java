@@ -64,13 +64,12 @@ public class OpenAIResponsesModel implements Model {
     if (request.getTools() != null && !request.getTools().isEmpty()) {
       registerTools(paramsBuilder, request.getTools());
       // Configure maxToolCalls from settings or use default
-      int maxToolCalls =
-          request.getSettings() != null
-                  && request.getSettings().getMaxToolCalls() != null
-                  && request.getSettings().getMaxToolCalls().isPresent()
-              ? request.getSettings().getMaxToolCalls().get()
-              : 10;
-      paramsBuilder.maxToolCalls(maxToolCalls);
+      if (request.getSettings().getMaxToolCalls().isPresent()) {
+        int maxToolCalls = request.getSettings().getMaxToolCalls().get();
+        if (maxToolCalls > 0) {
+          paramsBuilder.maxToolCalls(maxToolCalls);
+        }
+      }
     }
 
     ResponseCreateParams params = paramsBuilder.build();
@@ -327,13 +326,12 @@ public class OpenAIResponsesModel implements Model {
 
     if (request.getTools() != null && !request.getTools().isEmpty()) {
       registerTools(paramsBuilder, request.getTools());
-      int maxToolCalls =
-          request.getSettings() != null
-                  && request.getSettings().getMaxToolCalls() != null
-                  && request.getSettings().getMaxToolCalls().isPresent()
-              ? request.getSettings().getMaxToolCalls().get()
-              : 10;
-      paramsBuilder.maxToolCalls(maxToolCalls);
+      if (request.getSettings().getMaxToolCalls().isPresent()) {
+        int maxToolCalls = request.getSettings().getMaxToolCalls().get();
+        if (maxToolCalls > 0) {
+          paramsBuilder.maxToolCalls(maxToolCalls);
+        }
+      }
     }
 
     ResponseCreateParams params = paramsBuilder.build();

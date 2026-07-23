@@ -1,13 +1,16 @@
 package ai.acolite.agentsdk.openai;
 
+import ai.acolite.agentsdk.core.RunMessageInputItem;
 import ai.acolite.agentsdk.core.RunMessageOutputItem;
 import ai.acolite.agentsdk.core.RunToolCallItem;
 import ai.acolite.agentsdk.core.RunToolCallOutputItem;
+import com.openai.models.responses.EasyInputMessage;
 import com.openai.models.responses.ResponseFunctionToolCall;
 import com.openai.models.responses.ResponseInputItem;
 import com.openai.models.responses.ResponseOutputMessage;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * ConversionUtils
@@ -34,7 +37,14 @@ public class ConversionUtils {
     List<ResponseInputItem> inputItems = new ArrayList<>();
 
     for (Object item : items) {
-      if (item instanceof String text) {
+      if (item instanceof RunMessageInputItem inputItem) {
+        inputItems.add(
+            ResponseInputItem.ofMessage(
+                ResponseInputItem.Message.builder()
+                    .addInputTextContent(inputItem.getContent())
+                    .role(ResponseInputItem.Message.Role.USER)
+                    .build()));
+      } else if (item instanceof String text) {
         inputItems.add(
             ResponseInputItem.ofMessage(
                 ResponseInputItem.Message.builder()
@@ -65,10 +75,43 @@ public class ConversionUtils {
         Object content = messageOutput.getContent();
         if (content instanceof ResponseOutputMessage responseMessage) {
           inputItems.add(ResponseInputItem.ofResponseOutputMessage(responseMessage));
+        } else if (content instanceof String text) {
+          inputItems.add(convertToResponseInputItem(text));
+        } else if (content instanceof Map) {
+          String messageText = getOutputItemMapContentMessage((Map<String, Object>) content);
+          if (messageText != null) {
+            inputItems.add(convertToResponseInputItem(messageText));
+          }
         }
       }
     }
-
     return inputItems;
+  }
+
+  public static ResponseInputItem convertToResponseInputItem(String text) {
+    return ResponseInputItem.ofEasyInputMessage(
+        EasyInputMessage.builder().role(EasyInputMessage.Role.ASSISTANT).content(text).build());
+  }
+
+  public static String getOutputItemMapContentMessage(RunMessageOutputItem outputItem) {
+    Object content = outputItem.getContent();
+    if (content instanceof Map) {
+      return getOutputItemMapContentMessage((Map<String, Object>) content);
+    }
+    return null;
+  }
+
+  public static String getOutputItemMapContentMessage(Map<String, Object> messageOutput) {
+    if (messageOutput.containsKey("content")) {
+      List<Map<String, Object>> contentList =
+          (List<Map<String, Object>>) messageOutput.get("content");
+      if (!contentList.isEmpty()) {
+        Map<String, Object> firstContent = contentList.get(0);
+        if (firstContent.containsKey("text")) {
+          return (String) firstContent.get("text");
+        }
+      }
+    }
+    return null;
   }
 }

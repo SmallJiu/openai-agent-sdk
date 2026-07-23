@@ -4,11 +4,12 @@ import ai.acolite.agentsdk.core.ModelResponse;
 import ai.acolite.agentsdk.core.RunItem;
 import ai.acolite.agentsdk.core.RunMessageOutputItem;
 import ai.acolite.agentsdk.core.RunToolCallItem;
+import ai.acolite.agentsdk.openai.ConversionUtils;
 import ai.acolite.agentsdk.openai.SerializationUtils;
 import com.openai.models.responses.*;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * ResponseParser
@@ -62,7 +63,17 @@ public class ResponseParser {
 
     // Handle ResponseOutputMessage - store the original message object for conversation history.
     if (outputItem instanceof ResponseOutputMessage message) {
-      return RunMessageOutputItem.builder().content(message).role("assistant").build();
+      return RunMessageOutputItem.builder()
+          .content(message.content().getFirst().asOutputText().text())
+          .role("assistant")
+          .build();
+    }
+
+    if (outputItem instanceof Map) {
+      return RunMessageOutputItem.builder()
+          .content(ConversionUtils.getOutputItemMapContentMessage((Map<String, Object>) outputItem))
+          .role("assistant")
+          .build();
     }
 
     if (outputItem instanceof ResponseFunctionToolCall functionCall) {
