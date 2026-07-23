@@ -116,10 +116,7 @@ class RunItemUtilsTest {
   void hasToolCallOutput_noMatchingOutput_returnsFalse() {
     List<RunItem> items =
         List.of(
-            RunToolCallOutputItem.builder()
-                .toolCallId("call_999")
-                .result(42)
-                .build());
+            RunToolCallOutputItem.builder().toolCallId("call_999").result(42).build());
 
     boolean result = RunItemUtils.hasToolCallOutput(items, "call_123");
 
@@ -130,10 +127,7 @@ class RunItemUtilsTest {
   void hasToolCallOutput_matchingOutput_returnsTrue() {
     List<RunItem> items =
         List.of(
-            RunToolCallOutputItem.builder()
-                .toolCallId("call_123")
-                .result(42)
-                .build());
+            RunToolCallOutputItem.builder().toolCallId("call_123").result(42).build());
 
     boolean result = RunItemUtils.hasToolCallOutput(items, "call_123");
 
@@ -144,18 +138,9 @@ class RunItemUtilsTest {
   void hasToolCallOutput_multipleOutputs_findsCorrectOne() {
     List<RunItem> items =
         List.of(
-            RunToolCallOutputItem.builder()
-                .toolCallId("call_1")
-                .result(42)
-                .build(),
-            RunToolCallOutputItem.builder()
-                .toolCallId("call_2")
-                .result("result")
-                .build(),
-            RunToolCallOutputItem.builder()
-                .toolCallId("call_3")
-                .result(true)
-                .build());
+            RunToolCallOutputItem.builder().toolCallId("call_1").result(42).build(),
+            RunToolCallOutputItem.builder().toolCallId("call_2").result("result").build(),
+            RunToolCallOutputItem.builder().toolCallId("call_3").result(true).build());
 
     boolean hasCall2 = RunItemUtils.hasToolCallOutput(items, "call_2");
     boolean hasCall999 = RunItemUtils.hasToolCallOutput(items, "call_999");
