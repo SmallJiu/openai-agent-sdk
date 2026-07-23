@@ -272,7 +272,6 @@ class RunnerTest {
         RunToolCallOutputItem.builder()
             .toolCallId("call-1")
             .result("Tool result")
-            .error(Optional.empty())
             .build();
     ModelResponse response2 =
         ModelResponse.builder()
@@ -328,7 +327,6 @@ class RunnerTest {
         RunToolCallOutputItem.builder()
             .toolCallId("call-1")
             .result("Search results")
-            .error(Optional.empty())
             .build();
     ModelResponse response2 =
         ModelResponse.builder()

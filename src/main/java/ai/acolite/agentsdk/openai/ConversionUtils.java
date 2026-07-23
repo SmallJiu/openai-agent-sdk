@@ -60,15 +60,10 @@ public class ConversionUtils {
                 .build();
         inputItems.add(ResponseInputItem.ofFunctionCall(functionCall));
       } else if (item instanceof RunToolCallOutputItem toolOutput) {
-        Object result =
-            toolOutput.getResult() != null
-                ? toolOutput.getResult()
-                : toolOutput.getError().orElse("Error: no result");
-
         ResponseInputItem.FunctionCallOutput output =
             ResponseInputItem.FunctionCallOutput.builder()
                 .callId(toolOutput.getToolCallId())
-                .outputAsJson(result)
+                .outputAsJson(toolOutput.getResult())
                 .build();
         inputItems.add(ResponseInputItem.ofFunctionCallOutput(output));
       } else if (item instanceof RunMessageOutputItem messageOutput) {
