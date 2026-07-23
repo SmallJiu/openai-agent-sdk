@@ -168,8 +168,7 @@ class RunItemUtilsTest {
     boolean pendingBefore = RunItemUtils.hasPendingToolCalls(items);
     assertTrue(pendingBefore);
 
-    items.add(
-        RunToolCallOutputItem.builder().toolCallId("call_1").result(42).build());
+    items.add(RunToolCallOutputItem.builder().toolCallId("call_1").result(42).build());
 
     boolean pendingAfter = RunItemUtils.hasPendingToolCalls(items);
     assertFalse(pendingAfter);
