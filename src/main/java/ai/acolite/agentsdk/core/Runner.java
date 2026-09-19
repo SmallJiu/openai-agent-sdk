@@ -855,7 +855,8 @@ public class Runner extends RunHooks<Object, TextOutput> {
 
   /** Invoke a tool with type-safe parameter deserialization. */
   @SuppressWarnings({"unchecked", "rawtypes"})
-  private <TContext> CompletableFuture<Object> invokeTool(FunctionTool<?, ?, ?> tool, RunContext<TContext> context, Object parameters) {
+  private <TContext> CompletableFuture<Object> invokeTool(
+      FunctionTool<?, ?, ?> tool, RunContext<TContext> context, Object parameters) {
     try {
       Object typedParams =
           ToolExecutionUtils.deserializeParameters(parameters, tool.getParameters());
