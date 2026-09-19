@@ -696,7 +696,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
       FunctionTool<?, ?, ?> tool,
       Agent<TContext, ?> typedAgent) {
 
-    return invokeTool(tool, toolCall.getParameters())
+    return invokeTool(tool, state.getContext(), toolCall.getParameters())
         .thenCompose(
             result -> {
               if (typedAgent.getToolOutputGuardrails() != null
@@ -809,7 +809,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
       return CompletableFuture.completedFuture(null);
     }
 
-    return invokeTool(tool, toolCall.getParameters())
+    return invokeTool(tool, state.getContext(), toolCall.getParameters())
         .thenAccept(
             result -> {
               RunToolCallOutputItem output =
@@ -855,11 +855,10 @@ public class Runner extends RunHooks<Object, TextOutput> {
 
   /** Invoke a tool with type-safe parameter deserialization. */
   @SuppressWarnings({"unchecked", "rawtypes"})
-  private CompletableFuture<Object> invokeTool(FunctionTool<?, ?, ?> tool, Object parameters) {
+  private <TContext> CompletableFuture<Object> invokeTool(FunctionTool<?, ?, ?> tool, RunContext<TContext> context, Object parameters) {
     try {
       Object typedParams =
           ToolExecutionUtils.deserializeParameters(parameters, tool.getParameters());
-      RunContext context = new RunContext();
       return ((FunctionTool) tool).invoke(context, typedParams).thenApply(result -> result);
     } catch (Exception e) {
       return CompletableFuture.failedFuture(e);
