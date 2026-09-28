@@ -611,6 +611,8 @@ public class Runner extends RunHooks<Object, TextOutput> {
                 .build());
       } else if (event instanceof CompleteResponseStreamEvent completeEvent) {
         finalResponse = completeEvent.getResponse();
+      } else {
+        eventEmitter.emit(RunRawModelStreamEvent.builder().modelEvent(event).build());
       }
     }
 
