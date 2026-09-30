@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import lombok.Getter;
 
 /**
@@ -149,7 +150,7 @@ public class RunContext<TContext> {
     if (alwaysApprove) {
       ApprovalRecord record = new ApprovalRecord();
       record.setApproved(true);
-      record.setRejected(new ArrayList<>());
+      record.setRejected(new CopyOnWriteArrayList<>());
       approvals.put(toolName, record);
       return;
     }
@@ -159,8 +160,8 @@ public class RunContext<TContext> {
             toolName,
             k -> {
               ApprovalRecord r = new ApprovalRecord();
-              r.setApproved(new ArrayList<>());
-              r.setRejected(new ArrayList<>());
+              r.setApproved(new CopyOnWriteArrayList<>());
+              r.setRejected(new CopyOnWriteArrayList<>());
               return r;
             });
 

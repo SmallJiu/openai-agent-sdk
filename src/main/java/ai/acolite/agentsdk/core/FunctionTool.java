@@ -18,6 +18,28 @@ public interface FunctionTool<TContext, TInput, TOutput> extends Tool<TContext> 
 
   boolean needsApproval(RunContext<TContext> context, TInput input);
 
+  /**
+   * Approves the tool call for execution.
+   *
+   * <p>Default implementation marks the tool call as approved in the RunContext. Override this
+   * method to implement custom approval logic, such as logging, notifications, or additional
+   * checks.
+   *
+   * <p>If CompletableFuture is asynchronous, the tool call will wait for approval to complete
+   * before executing.
+   *
+   * @param context The run context
+   * @param toolcallId The unique ID of the tool call
+   * @param input The input parameters for the tool call
+   * @return A CompletableFuture that completes when approval is processed
+   */
+  default CompletableFuture<Void> approve(
+      RunContext<TContext> context, String toolcallId, TInput input) {
+    context.approveTool(
+        RunToolApprovalItem.builder().toolName(getName()).toolCallId(toolcallId).build(), true);
+    return CompletableFuture.completedFuture(null);
+  }
+
   boolean isEnabled(RunContext<TContext> context);
 
   /**

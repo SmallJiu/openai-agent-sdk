@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -427,7 +428,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
               }
 
               if (!regularToolCalls.isEmpty()) {
-                return executeTools(state, regularToolCalls, agent).thenApply(s -> state);
+                return executeTools(config, state, regularToolCalls, agent).thenApply(s -> state);
               }
 
               return CompletableFuture.completedFuture(state);
@@ -575,7 +576,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
               }
 
               if (!regularToolCalls.isEmpty()) {
-                return executeToolsStreamed(state, regularToolCalls, agent, eventEmitter)
+                return executeToolsStreamed(config, state, regularToolCalls, agent, eventEmitter)
                     .thenApply(s -> state);
               }
 
@@ -631,16 +632,20 @@ public class Runner extends RunHooks<Object, TextOutput> {
   /**
    * Execute tool calls and add results to state.
    *
+   * @param config
    * @param state Current conversation state
    * @param toolCalls List of tool calls to execute
    * @param agent Current agent with tool definitions
    * @return CompletableFuture resolving when all tools complete
    */
   private <TContext, TAgent> CompletableFuture<Void> executeTools(
-      RunState<TContext, TAgent> state, List<RunToolCallItem> toolCalls, Agent<?, ?> agent) {
+      RunConfig config,
+      RunState<TContext, TAgent> state,
+      List<RunToolCallItem> toolCalls,
+      Agent<?, ?> agent) {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     for (RunToolCallItem toolCall : toolCalls) {
-      CompletableFuture<Void> future = executeSingleTool(state, toolCall, agent);
+      CompletableFuture<Void> future = executeSingleTool(config, state, toolCall, agent);
       futures.add(future);
     }
 
@@ -649,7 +654,10 @@ public class Runner extends RunHooks<Object, TextOutput> {
 
   /** Execute a single tool call. */
   private <TContext, TAgent> CompletableFuture<Void> executeSingleTool(
-      RunState<TContext, TAgent> state, RunToolCallItem toolCall, Agent<?, ?> agent) {
+      RunConfig config,
+      RunState<TContext, TAgent> state,
+      RunToolCallItem toolCall,
+      Agent<?, ?> agent) {
     FunctionTool<?, ?, ?> tool = ToolExecutionUtils.findToolByName(agent, toolCall.getName());
     if (tool == null) {
       RunToolCallOutputItem errorOutput =
@@ -685,20 +693,21 @@ public class Runner extends RunHooks<Object, TextOutput> {
                   return CompletableFuture.completedFuture(null);
                 }
 
-                return executeToolWithOutputGuardrails(state, toolCall, tool, typedAgent);
+                return executeToolWithOutputGuardrails(config, state, toolCall, tool, typedAgent);
               });
     }
 
-    return executeToolWithOutputGuardrails(state, toolCall, tool, typedAgent);
+    return executeToolWithOutputGuardrails(config, state, toolCall, tool, typedAgent);
   }
 
   private <TContext, TAgent> CompletableFuture<Void> executeToolWithOutputGuardrails(
+      RunConfig config,
       RunState<TContext, TAgent> state,
       RunToolCallItem toolCall,
       FunctionTool<?, ?, ?> tool,
       Agent<TContext, ?> typedAgent) {
 
-    return invokeTool(tool, state.getContext(), toolCall.getParameters())
+    return invokeTool(config, state.getContext(), tool, toolCall.getId(), toolCall.getParameters())
         .thenCompose(
             result -> {
               if (typedAgent.getToolOutputGuardrails() != null
@@ -760,6 +769,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
    *
    * <p>Same as executeTools() but emits RunItemStreamEvent for each tool output.
    *
+   * @param config
    * @param state Current conversation state
    * @param toolCalls List of tool calls to execute
    * @param agent Current agent with tool definitions
@@ -767,6 +777,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
    * @return CompletableFuture resolving when all tools complete
    */
   private <TContext, TAgent> CompletableFuture<Void> executeToolsStreamed(
+      RunConfig config,
       RunState<TContext, TAgent> state,
       List<RunToolCallItem> toolCalls,
       Agent<?, ?> agent,
@@ -776,7 +787,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
 
     for (RunToolCallItem toolCall : toolCalls) {
       CompletableFuture<Void> future =
-          executeSingleToolStreamed(state, toolCall, agent, eventEmitter);
+          executeSingleToolStreamed(config, state, toolCall, agent, eventEmitter);
       futures.add(future);
     }
 
@@ -789,6 +800,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
    * <p>Same as executeSingleTool() but emits RunItemStreamEvent for tool output.
    */
   private <TContext, TAgent> CompletableFuture<Void> executeSingleToolStreamed(
+      RunConfig config,
       RunState<TContext, TAgent> state,
       RunToolCallItem toolCall,
       Agent<?, ?> agent,
@@ -811,7 +823,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
       return CompletableFuture.completedFuture(null);
     }
 
-    return invokeTool(tool, state.getContext(), toolCall.getParameters())
+    return invokeTool(config, state.getContext(), tool, toolCall.getId(), toolCall.getParameters())
         .thenAccept(
             result -> {
               RunToolCallOutputItem output =
@@ -858,10 +870,31 @@ public class Runner extends RunHooks<Object, TextOutput> {
   /** Invoke a tool with type-safe parameter deserialization. */
   @SuppressWarnings({"unchecked", "rawtypes"})
   private <TContext> CompletableFuture<Object> invokeTool(
-      FunctionTool<?, ?, ?> tool, RunContext<TContext> context, Object parameters) {
+      RunConfig config,
+      RunContext<TContext> context,
+      FunctionTool<?, ?, ?> tool,
+      String toolId,
+      Object parameters) {
     try {
       Object typedParams =
           ToolExecutionUtils.deserializeParameters(parameters, tool.getParameters());
+      if (((FunctionTool) tool).needsApproval(context, typedParams)) {
+        CompletableFuture<Void> awaiting =
+            ((FunctionTool) tool).approve(context, toolId, typedParams);
+        if (awaiting != null) {
+          awaiting
+              .completeOnTimeout(
+                  null, config.getEffectiveToolApprovalTimeoutMs(), TimeUnit.MILLISECONDS)
+              .join();
+        }
+        Boolean approved = context.isToolApproved(tool.getName(), toolId);
+        if (!Boolean.TRUE.equals(approved)) {
+          return CompletableFuture.completedFuture(
+              approved == null
+                  ? "This tool requires approval and has not yet been approved."
+                  : "The tool has been denied execution.");
+        }
+      }
       return ((FunctionTool) tool).invoke(context, typedParams).thenApply(result -> result);
     } catch (Exception e) {
       return CompletableFuture.failedFuture(e);

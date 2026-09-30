@@ -27,6 +27,11 @@ public class RunConfig {
   Long timeoutMs;
 
   /**
+   * Timeout in milliseconds for tool approval. Defaults to 300000ms (5 minutes) if not specified.
+   */
+  Long toolApprovalTimeoutMs;
+
+  /**
    * Timeout in milliseconds for each model API call. Defaults to 60000ms (60 seconds) if not
    * specified.
    */
@@ -68,11 +73,18 @@ public class RunConfig {
 
   /** Gets the model timeout in milliseconds, defaulting to 60 seconds if not set */
   public long getEffectiveModelTimeoutMs() {
-    return modelTimeoutMs != null ? modelTimeoutMs : 60000L;
+    return modelTimeoutMs != null ? modelTimeoutMs : 60 * 1000L;
   }
 
   /** Gets the overall run timeout in milliseconds, or null if no timeout */
   public Long getEffectiveTimeoutMs() {
     return timeoutMs;
+  }
+
+  /** Gets the tool approval timeout in milliseconds, defaulting to 5 minutes if not set */
+  public long getEffectiveToolApprovalTimeoutMs() {
+    return toolApprovalTimeoutMs != null
+        ? toolApprovalTimeoutMs
+        : 5 * 60 * 1000L; // Default to 5 minutes
   }
 }
