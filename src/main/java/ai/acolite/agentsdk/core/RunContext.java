@@ -131,6 +131,22 @@ public class RunContext<TContext> {
     return null;
   }
 
+  public Boolean isTooAlwaysApproved(String toolName) {
+    ApprovalRecord record = approvals.get(toolName);
+    if (record == null) {
+      return null;
+    }
+    return Boolean.TRUE.equals(record.getApproved());
+  }
+
+  public Boolean isTooAlwaysRejected(String toolName) {
+    ApprovalRecord record = approvals.get(toolName);
+    if (record == null) {
+      return null;
+    }
+    return Boolean.TRUE.equals(record.getRejected());
+  }
+
   /**
    * Approves a tool call for execution.
    *
