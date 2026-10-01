@@ -241,6 +241,8 @@ public class OpenAIResponsesModel implements Model {
         output.add(item.asImageGenerationCall());
       } else if (item.isFileSearchCall()) {
         output.add(item.asFileSearchCall());
+      } else if (item.isReasoning()) {
+        output.add(item.asReasoning());
       } else {
         // Store the ResponseOutputMessage objects so they can be reused in conversation history
         item.message().stream().forEach(message -> output.add(message));

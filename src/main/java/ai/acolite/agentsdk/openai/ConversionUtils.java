@@ -1,13 +1,7 @@
 package ai.acolite.agentsdk.openai;
 
-import ai.acolite.agentsdk.core.RunMessageInputItem;
-import ai.acolite.agentsdk.core.RunMessageOutputItem;
-import ai.acolite.agentsdk.core.RunToolCallItem;
-import ai.acolite.agentsdk.core.RunToolCallOutputItem;
-import com.openai.models.responses.EasyInputMessage;
-import com.openai.models.responses.ResponseFunctionToolCall;
-import com.openai.models.responses.ResponseInputItem;
-import com.openai.models.responses.ResponseOutputMessage;
+import ai.acolite.agentsdk.core.*;
+import com.openai.models.responses.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -51,12 +45,23 @@ public class ConversionUtils {
                     .addInputTextContent(text)
                     .role(ResponseInputItem.Message.Role.USER)
                     .build()));
+      } else if (item instanceof RunReasoningItem reasoning) {
+        inputItems.add(
+            ResponseInputItem.ofReasoning(
+                ResponseReasoningItem.builder()
+                    .id("reasoning-" + reasoning.hashCode())
+                    .addSummary(
+                        ResponseReasoningItem.Summary.builder()
+                            .text(reasoning.getContent())
+                            .build())
+                    .build()));
       } else if (item instanceof RunToolCallItem toolCall) {
         ResponseFunctionToolCall functionCall =
             ResponseFunctionToolCall.builder()
                 .callId(toolCall.getId())
                 .name(toolCall.getName())
                 .arguments(SerializationUtils.serializeToJson(toolCall.getParameters()))
+                .additionalProperties(toolCall.getAdditionalProperties())
                 .build();
         inputItems.add(ResponseInputItem.ofFunctionCall(functionCall));
       } else if (item instanceof RunToolCallOutputItem toolOutput) {
@@ -84,8 +89,14 @@ public class ConversionUtils {
   }
 
   public static ResponseInputItem convertToResponseInputItem(String text) {
-    return ResponseInputItem.ofEasyInputMessage(
-        EasyInputMessage.builder().role(EasyInputMessage.Role.ASSISTANT).content(text).build());
+    return ResponseInputItem.ofResponseOutputMessage(
+        ResponseOutputMessage.builder()
+            .id("message-" + System.currentTimeMillis())
+            .status(ResponseOutputMessage.Status.COMPLETED)
+            .addContent(
+                ResponseOutputMessage.Content.ofOutputText(
+                    ResponseOutputText.builder().text(text).annotations(List.of()).build()))
+            .build());
   }
 
   public static String getOutputItemMapContentMessage(RunMessageOutputItem outputItem) {

@@ -16,6 +16,7 @@ public record RunItemStreamEvent(RunItem item, int turnIndex) implements RunStre
   public String getType() {
     return switch (item) {
       case RunMessageOutputItem ignored -> "message_output_created";
+      case RunReasoningItem ignored -> "reasoning_output";
       case RunToolCallItem ignored -> "tool_called";
       case RunToolCallOutputItem ignored -> "tool_output";
       case RunHandoffCallItem ignored -> "handoff_called";

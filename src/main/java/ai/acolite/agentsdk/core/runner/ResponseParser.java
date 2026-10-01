@@ -1,15 +1,11 @@
 package ai.acolite.agentsdk.core.runner;
 
-import ai.acolite.agentsdk.core.ModelResponse;
-import ai.acolite.agentsdk.core.RunItem;
-import ai.acolite.agentsdk.core.RunMessageOutputItem;
-import ai.acolite.agentsdk.core.RunToolCallItem;
+import ai.acolite.agentsdk.core.*;
 import ai.acolite.agentsdk.openai.ConversionUtils;
 import ai.acolite.agentsdk.openai.SerializationUtils;
+import com.openai.core.*;
 import com.openai.models.responses.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * ResponseParser
@@ -76,6 +72,11 @@ public class ResponseParser {
           .build();
     }
 
+    if (outputItem instanceof ResponseReasoningItem reasoning) {
+      String reasoningText = extractReasoningText(reasoning);
+      return RunReasoningItem.builder().content(reasoningText).build();
+    }
+
     if (outputItem instanceof ResponseFunctionToolCall functionCall) {
       Object parameters = parseToolArguments(functionCall.arguments());
 
@@ -83,6 +84,7 @@ public class ResponseParser {
           .id(functionCall.callId())
           .name(functionCall.name())
           .parameters(parameters)
+          .additionalProperties(functionCall._additionalProperties())
           .build();
     }
 
@@ -92,6 +94,7 @@ public class ResponseParser {
           .id(webSearchCall.id())
           .name("web_search")
           .parameters(webSearchCall.action())
+          .additionalProperties(webSearchCall._additionalProperties())
           .build();
     }
 
@@ -100,6 +103,7 @@ public class ResponseParser {
           .id(imageGenCall.id())
           .name("image_generation")
           .parameters(null)
+          .additionalProperties(imageGenCall._additionalProperties())
           .build();
     }
 
@@ -147,5 +151,67 @@ public class ResponseParser {
     }
 
     return null;
+  }
+
+  private static final String[] REASONING_KEYS = {"reasoning_content", "reasoning", "thinking"};
+
+  public static String extractReasoningText(ResponseReasoningItem reasoning) {
+    StringBuilder sb = new StringBuilder();
+
+    List<ResponseReasoningItem.Summary> summary = reasoning.summary();
+    for (ResponseReasoningItem.Summary part : summary) {
+      appendLine(sb, part == null ? null : part.text());
+    }
+
+    reasoning
+        .content()
+        .ifPresent(
+            parts -> {
+              for (ResponseReasoningItem.Content part : parts) {
+                appendLine(sb, part == null ? null : part.text());
+              }
+            });
+
+    if (sb.isEmpty()) {
+      Map<String, JsonValue> extra = reasoning._additionalProperties();
+      for (String key : REASONING_KEYS) {
+        String text = asText(extra.get(key));
+        if (!text.isEmpty()) return text;
+      }
+      for (JsonValue part : asJsonList(extra.get("parts"))) {
+        appendLine(sb, asText(asJsonMap(part).get("text")));
+      }
+    }
+
+    return sb.toString();
+  }
+
+  @SuppressWarnings("unchecked")
+  private static List<JsonValue> asJsonList(JsonValue value) {
+    if (value == null) return Collections.emptyList();
+    Object list = value.asArray().orElse(null);
+    return list instanceof List<?> ? (List<JsonValue>) list : Collections.emptyList();
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Map<String, JsonValue> asJsonMap(JsonValue value) {
+    if (value == null) return Collections.emptyMap();
+    Object map = value.asObject().orElse(null);
+    return map instanceof Map<?, ?> ? (Map<String, JsonValue>) map : Collections.emptyMap();
+  }
+
+  private static String asText(JsonValue value) {
+    if (value == null || value.isNull() || value.isMissing()) return "";
+    try {
+      return value.asStringOrThrow();
+    } catch (RuntimeException e) {
+      return "";
+    }
+  }
+
+  private static void appendLine(StringBuilder sb, String text) {
+    if (text == null || text.isEmpty()) return;
+    if (!sb.isEmpty()) sb.append('\n');
+    sb.append(text);
   }
 }
