@@ -707,7 +707,13 @@ public class Runner extends RunHooks<Object, TextOutput> {
       FunctionTool<?, ?, ?> tool,
       Agent<TContext, ?> typedAgent) {
 
-    return invokeTool(config, state.getContext(), tool, toolCall.getId(), toolCall.getParameters())
+    return invokeTool(
+            config,
+            state.getContext(),
+            tool,
+            toolCall.getId(),
+            toolCall.getParameters(),
+            toolCall.getReasoning())
         .thenCompose(
             result -> {
               if (typedAgent.getToolOutputGuardrails() != null
@@ -823,7 +829,13 @@ public class Runner extends RunHooks<Object, TextOutput> {
       return CompletableFuture.completedFuture(null);
     }
 
-    return invokeTool(config, state.getContext(), tool, toolCall.getId(), toolCall.getParameters())
+    return invokeTool(
+            config,
+            state.getContext(),
+            tool,
+            toolCall.getId(),
+            toolCall.getParameters(),
+            toolCall.getReasoning())
         .thenAccept(
             result -> {
               RunToolCallOutputItem output =
@@ -874,13 +886,14 @@ public class Runner extends RunHooks<Object, TextOutput> {
       RunContext<TContext> context,
       FunctionTool<?, ?, ?> tool,
       String toolId,
-      Object parameters) {
+      Object parameters,
+      String reasoning) {
     try {
       Object typedParams =
           ToolExecutionUtils.deserializeParameters(parameters, tool.getParameters());
       if (((FunctionTool) tool).needsApproval(context, typedParams)) {
         CompletableFuture<Void> awaiting =
-            ((FunctionTool) tool).approve(context, toolId, typedParams);
+            ((FunctionTool) tool).approve(context, toolId, typedParams, reasoning);
         if (awaiting != null) {
           awaiting
               .completeOnTimeout(

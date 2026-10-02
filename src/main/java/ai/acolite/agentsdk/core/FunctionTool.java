@@ -34,7 +34,7 @@ public interface FunctionTool<TContext, TInput, TOutput> extends Tool<TContext> 
    * @return A CompletableFuture that completes when approval is processed
    */
   default CompletableFuture<Void> approve(
-      RunContext<TContext> context, String toolcallId, TInput input) {
+      RunContext<TContext> context, String toolcallId, TInput input, String reasoning) {
     context.approveTool(
         RunToolApprovalItem.builder().toolName(getName()).toolCallId(toolcallId).build(), true);
     return CompletableFuture.completedFuture(null);
