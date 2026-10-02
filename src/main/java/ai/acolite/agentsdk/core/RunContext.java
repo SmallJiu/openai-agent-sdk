@@ -131,20 +131,23 @@ public class RunContext<TContext> {
     return null;
   }
 
-  public Boolean isToolAlwaysApproved(String toolName) {
+  public String getToolRejectedReason(String toolName, String callId) {
     ApprovalRecord record = approvals.get(toolName);
-    if (record == null) {
-      return null;
-    }
-    return Boolean.TRUE.equals(record.getApproved());
+    return record == null
+        ? null
+        : record.getAlwaysRejectReason() != null
+            ? record.getAlwaysRejectReason()
+            : record.getRejectedReason(callId);
   }
 
-  public Boolean isToolAlwaysRejected(String toolName) {
+  public boolean isToolAlwaysApproved(String toolName) {
     ApprovalRecord record = approvals.get(toolName);
-    if (record == null) {
-      return null;
-    }
-    return Boolean.TRUE.equals(record.getRejected());
+    return record != null && Boolean.TRUE.equals(record.getApproved());
+  }
+
+  public boolean isToolAlwaysRejected(String toolName) {
+    ApprovalRecord record = approvals.get(toolName);
+    return record != null && Boolean.TRUE.equals(record.getRejected());
   }
 
   /**
@@ -203,6 +206,18 @@ public class RunContext<TContext> {
   }
 
   /**
+   * Rejects a tool call, preventing its execution (per-call mode).
+   *
+   * <p>This is a convenience method that rejects only the specific call ID. Use {@link
+   * #rejectTool(RunToolApprovalItem, boolean)} for permanent rejection.
+   *
+   * @param approvalItem The tool approval request
+   * @param rejectReason Optional reason for rejection (can be null)
+   */
+  public void rejectTool(RunToolApprovalItem approvalItem, String rejectReason) {
+    this.rejectTool(approvalItem, rejectReason, false);
+  }
+  /**
    * Rejects a tool call, preventing its execution.
    *
    * <p>This method provides two modes:
@@ -216,12 +231,32 @@ public class RunContext<TContext> {
    * @param alwaysReject If true, permanently rejects all calls to this tool
    */
   public void rejectTool(RunToolApprovalItem approvalItem, boolean alwaysReject) {
+    this.rejectTool(approvalItem, null, alwaysReject);
+  }
+
+  /**
+   * Rejects a tool call, preventing its execution, with an optional rejection reason.
+   *
+   * <p>This method provides two modes:
+   *
+   * <ul>
+   *   <li><b>Per-call rejection</b> (alwaysReject = false) - Only rejects this specific call ID
+   *   <li><b>Permanent rejection</b> (alwaysReject = true) - Rejects all future calls to this tool
+   * </ul>
+   *
+   * @param approvalItem The tool approval request containing tool name and call ID
+   * @param rejectReason Optional reason for rejection (can be null)
+   * @param alwaysReject If true, permanently rejects all calls to this tool
+   */
+  public void rejectTool(
+      RunToolApprovalItem approvalItem, String rejectReason, boolean alwaysReject) {
     String toolName = approvalItem.getToolName();
 
     if (alwaysReject) {
       ApprovalRecord record = new ApprovalRecord();
       record.setApproved(false);
       record.setRejected(true);
+      record.setAlwaysRejectReason(rejectReason);
       approvals.put(toolName, record);
       return;
     }
@@ -233,6 +268,7 @@ public class RunContext<TContext> {
               ApprovalRecord r = new ApprovalRecord();
               r.setApproved(new ArrayList<>());
               r.setRejected(new ArrayList<>());
+              r.addRejectedReason(approvalItem.getToolCallId(), rejectReason);
               return r;
             });
 

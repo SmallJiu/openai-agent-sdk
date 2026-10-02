@@ -1,6 +1,10 @@
 package ai.acolite.agentsdk.core;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * ApprovalRecord
@@ -13,6 +17,8 @@ import java.util.List;
 public class ApprovalRecord {
   private Object approved; // boolean | string[]
   private Object rejected; // boolean | string[]
+  @Setter @Getter private String alwaysRejectReason;
+  @Getter private Map<String, String> rejectedReason;
 
   public ApprovalRecord() {
     this.approved = false;
@@ -41,5 +47,15 @@ public class ApprovalRecord {
 
   public void setRejected(List<String> rejectedIds) {
     this.rejected = rejectedIds;
+  }
+
+  public void addRejectedReason(String toolId, String reason) {
+    if (this.rejectedReason == null) this.rejectedReason = new ConcurrentHashMap<>();
+    this.rejectedReason.put(toolId, reason);
+  }
+
+  public String getRejectedReason(String toolId) {
+    if (this.rejectedReason == null) return null;
+    return this.rejectedReason.get(toolId);
   }
 }

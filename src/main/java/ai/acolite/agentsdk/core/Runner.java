@@ -889,10 +889,12 @@ public class Runner extends RunHooks<Object, TextOutput> {
         }
         Boolean approved = context.isToolApproved(tool.getName(), toolId);
         if (!Boolean.TRUE.equals(approved)) {
+          String rejectionReson = context.getToolRejectedReason(tool.getName(), toolId);
           return CompletableFuture.completedFuture(
               approved == null
-                  ? "This tool requires approval and has not yet been approved."
-                  : "The tool has been denied execution.");
+                  ? "This tool requires approval and has not yet been approved by user."
+                  : "The tool has been denied by user execution."
+                      + (rejectionReson != null ? " Reson: " + rejectionReson : ""));
         }
       }
       return ((FunctionTool) tool).invoke(context, typedParams).thenApply(result -> result);
