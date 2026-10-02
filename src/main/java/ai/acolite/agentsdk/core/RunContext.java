@@ -217,6 +217,7 @@ public class RunContext<TContext> {
   public void rejectTool(RunToolApprovalItem approvalItem, String rejectReason) {
     this.rejectTool(approvalItem, rejectReason, false);
   }
+
   /**
    * Rejects a tool call, preventing its execution.
    *
