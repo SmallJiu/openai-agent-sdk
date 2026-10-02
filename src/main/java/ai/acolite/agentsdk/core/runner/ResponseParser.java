@@ -264,8 +264,8 @@ public class ResponseParser {
               if (val != null) outTokensDetails.put(key, val);
             });
 
-    usage.inputTokensDetails(List.of(inputTokensDetails));
-    usage.outputTokensDetails(List.of(outTokensDetails));
+    if (!inputTokensDetails.isEmpty()) usage.inputTokensDetails(List.of(inputTokensDetails));
+    if (!outTokensDetails.isEmpty()) usage.outputTokensDetails(List.of(outTokensDetails));
 
     return usage.build();
   }
