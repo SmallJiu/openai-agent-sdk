@@ -36,7 +36,7 @@ public class ResponseParser {
     }
     if (response.getUsage() != null && !items.isEmpty()) {
       items.add(
-              items.size()-1,
+          items.size() - 1,
           RunDoneUsageItem.builder()
               .inputTokens(response.getUsage().getInputTokens())
               .outputTokens(response.getUsage().getOutputTokens())
