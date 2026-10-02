@@ -34,7 +34,16 @@ public class ResponseParser {
         items.add(item);
       }
     }
-
+    if (response.getUsage() != null) {
+      items.add(
+          RunDoneUsageItem.builder()
+              .inputTokens(response.getUsage().getInputTokens())
+              .outputTokens(response.getUsage().getOutputTokens())
+              .totalTokens(response.getUsage().getTotalTokens())
+              .inputTokensDetails(response.getUsage().getInputTokensDetails())
+              .outputTokensDetails(response.getUsage().getOutputTokensDetails())
+              .build());
+    }
     return items;
   }
 
@@ -151,6 +160,114 @@ public class ResponseParser {
     }
 
     return null;
+  }
+
+  private static final JsonValue.Visitor<Double> TO_DOUBLE =
+      new JsonValue.Visitor<>() {
+        private static Double parseDoubleOrNull(String s) {
+          try {
+            return Double.parseDouble(s.trim());
+          } catch (Exception e) {
+            return null;
+          }
+        }
+
+        @Override
+        public Double visitNull() {
+          return null;
+        }
+
+        @Override
+        public Double visitMissing() {
+          return null;
+        }
+
+        @Override
+        public Double visitBoolean(boolean v) {
+          return null;
+        }
+
+        @Override
+        public Double visitNumber(Number v) {
+          return v.doubleValue();
+        }
+
+        @Override
+        public Double visitString(String v) {
+          return parseDoubleOrNull(v);
+        }
+
+        @Override
+        public Double visitArray(List<? extends JsonValue> values) {
+          return null;
+        }
+
+        @Override
+        public Double visitObject(Map<String, ? extends JsonValue> values) {
+          return null;
+        }
+
+        @Override
+        public Double visitDefault() {
+          return null;
+        }
+      };
+
+  private static Double safeDouble(java.util.function.Supplier<Long> s) {
+    try {
+      return (double) s.get();
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  private static Double jsonNumber(JsonValue value) {
+    if (value == null) return null;
+    try {
+      return value.accept(TO_DOUBLE);
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  public static Usage extractUsage(com.openai.models.responses.ResponseUsage apiUsage) {
+    if (apiUsage == null) {
+      return Usage.empty();
+    }
+    Usage.UsageBuilder usage =
+        Usage.builder()
+            .inputTokens((double) apiUsage.inputTokens())
+            .outputTokens((double) apiUsage.outputTokens())
+            .totalTokens((double) apiUsage.totalTokens());
+
+    Map<String, Double> inputTokensDetails = new HashMap<>();
+    Double cached = safeDouble(() -> apiUsage.inputTokensDetails().cachedTokens());
+    if (cached != null) inputTokensDetails.put("cached_tokens", cached);
+    apiUsage
+        .inputTokensDetails()
+        ._additionalProperties()
+        .forEach(
+            (key, value) -> {
+              Double val = jsonNumber(value);
+              if (val != null) inputTokensDetails.put(key, val);
+            });
+
+    Map<String, Double> outTokensDetails = new HashMap<>();
+    Double reasoning = safeDouble(() -> apiUsage.outputTokensDetails().reasoningTokens());
+    if (reasoning != null) outTokensDetails.put("reasoning_tokens", reasoning);
+    apiUsage
+        .outputTokensDetails()
+        ._additionalProperties()
+        .forEach(
+            (key, value) -> {
+              Double val = jsonNumber(value);
+              if (val != null) outTokensDetails.put(key, val);
+            });
+
+    usage.inputTokensDetails(List.of(inputTokensDetails));
+    usage.outputTokensDetails(List.of(outTokensDetails));
+
+    return usage.build();
   }
 
   private static final String[] REASONING_KEYS = {"reasoning_content", "reasoning", "thinking"};

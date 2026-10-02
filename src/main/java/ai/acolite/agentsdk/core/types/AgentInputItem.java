@@ -25,7 +25,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
   @JsonSubTypes.Type(value = ai.acolite.agentsdk.core.RunToolCallItem.class, name = "tool_call"),
   @JsonSubTypes.Type(
       value = ai.acolite.agentsdk.core.RunToolCallOutputItem.class,
-      name = "tool_output")
+      name = "tool_output"),
+  @JsonSubTypes.Type(value = ai.acolite.agentsdk.core.RunReasoningItem.class, name = "reasoning"),
+  @JsonSubTypes.Type(value = ai.acolite.agentsdk.core.RunDoneUsageItem.class, name = "usage")
 })
 public interface AgentInputItem {
   // Marker interface for agent input items

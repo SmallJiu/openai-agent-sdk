@@ -21,6 +21,7 @@ public record RunItemStreamEvent(RunItem item, int turnIndex) implements RunStre
       case RunToolCallOutputItem ignored -> "tool_output";
       case RunHandoffCallItem ignored -> "handoff_called";
       case RunHandoffOutputItem ignored -> "handoff_output";
+      case RunDoneUsageItem ignored -> "usage_output";
       case null, default -> "item_created";
     };
   }

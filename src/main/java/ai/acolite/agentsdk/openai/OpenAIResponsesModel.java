@@ -1,6 +1,7 @@
 package ai.acolite.agentsdk.openai;
 
 import ai.acolite.agentsdk.core.*;
+import ai.acolite.agentsdk.core.runner.ResponseParser;
 import ai.acolite.agentsdk.core.types.JsonSchemaOutput;
 import com.openai.client.OpenAIClient;
 import com.openai.core.http.StreamResponse;
@@ -13,9 +14,7 @@ import com.openai.models.responses.StructuredResponse;
 import com.openai.models.responses.StructuredResponseCreateParams;
 import com.openai.models.responses.Tool;
 import com.openai.models.responses.WebSearchTool;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -172,7 +171,11 @@ public class OpenAIResponsesModel implements Model {
   }
 
   private <T> ModelResponse convertStructuredToModelResponse(StructuredResponse<T> response) {
-    Usage usage = extractUsageFromStructured(response);
+    Optional<com.openai.models.responses.ResponseUsage> responseUsage = response.usage();
+    Usage usage =
+        responseUsage.isPresent()
+            ? ResponseParser.extractUsage(responseUsage.get())
+            : Usage.empty();
     List<Object> output = new ArrayList<>();
 
     response.output().stream()
@@ -188,21 +191,12 @@ public class OpenAIResponsesModel implements Model {
         .build();
   }
 
-  private <T> Usage extractUsageFromStructured(StructuredResponse<T> response) {
-    if (response.usage().isEmpty() || response.usage().isEmpty()) {
-      return Usage.empty();
-    }
-
-    com.openai.models.responses.ResponseUsage apiUsage = response.usage().get();
-    return Usage.builder()
-        .inputTokens((double) apiUsage.inputTokens())
-        .outputTokens((double) apiUsage.outputTokens())
-        .totalTokens((double) apiUsage.totalTokens())
-        .build();
-  }
-
   private ModelResponse convertToModelResponse(Response response) {
-    Usage usage = extractUsage(response);
+    Optional<com.openai.models.responses.ResponseUsage> responseUsage = response.usage();
+    Usage usage =
+        responseUsage.isPresent()
+            ? ResponseParser.extractUsage(responseUsage.get())
+            : Usage.empty();
     List<Object> output = extractOutput(response);
 
     return ModelResponse.builder()
@@ -210,19 +204,6 @@ public class OpenAIResponsesModel implements Model {
         .output(output)
         .responseId(Optional.ofNullable(response.id()))
         .providerData(Optional.empty())
-        .build();
-  }
-
-  private Usage extractUsage(Response response) {
-    if (response.usage() == null || response.usage().isEmpty()) {
-      return Usage.empty();
-    }
-
-    com.openai.models.responses.ResponseUsage apiUsage = response.usage().get();
-    return Usage.builder()
-        .inputTokens((double) apiUsage.inputTokens())
-        .outputTokens((double) apiUsage.outputTokens())
-        .totalTokens((double) apiUsage.totalTokens())
         .build();
   }
 

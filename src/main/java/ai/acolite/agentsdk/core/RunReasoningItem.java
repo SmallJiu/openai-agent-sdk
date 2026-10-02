@@ -2,6 +2,7 @@ package ai.acolite.agentsdk.core;
 
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
+import lombok.extern.jackson.Jacksonized;
 
 /**
  * RunReasoningItem
@@ -13,6 +14,7 @@ import lombok.experimental.SuperBuilder;
  */
 @Getter
 @SuperBuilder
+@Jacksonized
 public class RunReasoningItem extends RunItemBase {
   private final String content;
 }
