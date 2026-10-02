@@ -243,26 +243,29 @@ public class ResponseParser {
     Map<String, Double> inputTokensDetails = new HashMap<>();
     Double cached = safeDouble(() -> apiUsage.inputTokensDetails().cachedTokens());
     if (cached != null) inputTokensDetails.put("cached_tokens", cached);
-    apiUsage
-        .inputTokensDetails()
-        ._additionalProperties()
-        .forEach(
-            (key, value) -> {
-              Double val = jsonNumber(value);
-              if (val != null) inputTokensDetails.put(key, val);
-            });
+
+    if (!apiUsage._inputTokensDetails().isMissing() && !apiUsage._inputTokensDetails().isNull())
+      apiUsage
+          .inputTokensDetails()
+          ._additionalProperties()
+          .forEach(
+              (key, value) -> {
+                Double val = jsonNumber(value);
+                if (val != null) inputTokensDetails.put(key, val);
+              });
 
     Map<String, Double> outTokensDetails = new HashMap<>();
     Double reasoning = safeDouble(() -> apiUsage.outputTokensDetails().reasoningTokens());
     if (reasoning != null) outTokensDetails.put("reasoning_tokens", reasoning);
-    apiUsage
-        .outputTokensDetails()
-        ._additionalProperties()
-        .forEach(
-            (key, value) -> {
-              Double val = jsonNumber(value);
-              if (val != null) outTokensDetails.put(key, val);
-            });
+    if (!apiUsage._outputTokensDetails().isMissing() && !apiUsage._outputTokensDetails().isNull())
+      apiUsage
+          .outputTokensDetails()
+          ._additionalProperties()
+          .forEach(
+              (key, value) -> {
+                Double val = jsonNumber(value);
+                if (val != null) outTokensDetails.put(key, val);
+              });
 
     if (!inputTokensDetails.isEmpty()) usage.inputTokensDetails(List.of(inputTokensDetails));
     if (!outTokensDetails.isEmpty()) usage.outputTokensDetails(List.of(outTokensDetails));
