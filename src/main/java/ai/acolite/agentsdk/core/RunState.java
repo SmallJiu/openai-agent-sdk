@@ -1,11 +1,9 @@
 package ai.acolite.agentsdk.core;
 
 import ai.acolite.agentsdk.core.runner.RunItemUtils;
-import ai.acolite.agentsdk.core.types.AgentInputItem;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import lombok.Getter;
 import lombok.Setter;
