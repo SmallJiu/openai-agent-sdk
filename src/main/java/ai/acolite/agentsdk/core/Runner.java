@@ -216,6 +216,20 @@ public class Runner extends RunHooks<Object, TextOutput> {
     return result;
   }
 
+  private <TContext, TAgent>
+      List<ai.acolite.agentsdk.core.types.AgentInputItem> buildErrorItemsToSave(
+          List<Object> input, RunState<TContext, TAgent> finalState) {
+    List<ai.acolite.agentsdk.core.types.AgentInputItem> itemsToSave = new ArrayList<>();
+    for (Object inputItem : input) {
+      if (inputItem instanceof String) {
+        itemsToSave.add(
+            RunMessageInputItem.builder().content((String) inputItem).role("user").build());
+      }
+    }
+    itemsToSave.addAll(completeToolPairs(finalState.getGeneratedItems()));
+    return itemsToSave;
+  }
+
   /**
    * Executes a run with the given agent, input, and configuration.
    *
@@ -299,13 +313,10 @@ public class Runner extends RunHooks<Object, TextOutput> {
                     .thenCompose(v -> buildRunResultAsync(outcome.getKey(), agent));
               }
               Throwable cause = unwrap(outcome.getValue());
-              if (config.getSession() == null) {
-                return CompletableFuture.failedFuture(cause);
-              }
-              List<AgentInputItem> partial = completeToolPairs(state.getGeneratedItems());
+              if (config.getSession() == null) return CompletableFuture.failedFuture(cause);
               return config
                   .getSession()
-                  .addErrorTurnGeneratedItems(partial, cause)
+                  .addErrorTurnGeneratedItems(buildErrorItemsToSave(input, state), cause)
                   .thenCompose(v -> CompletableFuture.failedFuture(cause));
             });
   }
@@ -380,13 +391,10 @@ public class Runner extends RunHooks<Object, TextOutput> {
                 return config.getSession().addItems(itemsToSave).thenApply(v -> finalState);
               }
               Throwable cause = unwrap(outcome.getValue());
-              if (config.getSession() == null) {
-                return CompletableFuture.failedFuture(cause);
-              }
-              List<AgentInputItem> partial = completeToolPairs(state.getGeneratedItems());
+              if (config.getSession() == null) return CompletableFuture.failedFuture(cause);
               return config
                   .getSession()
-                  .addErrorTurnGeneratedItems(partial, cause)
+                  .addErrorTurnGeneratedItems(buildErrorItemsToSave(input, state), cause)
                   .thenCompose(v -> CompletableFuture.failedFuture(cause));
             });
   }
