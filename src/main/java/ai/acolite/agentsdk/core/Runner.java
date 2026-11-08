@@ -4,6 +4,7 @@ import ai.acolite.agentsdk.core.runner.AsyncExecutor;
 import ai.acolite.agentsdk.core.runner.ResponseParser;
 import ai.acolite.agentsdk.core.runner.ToolExecutionUtils;
 import ai.acolite.agentsdk.core.shims.ReadableStreamImpl;
+import ai.acolite.agentsdk.core.types.AgentInputItem;
 import ai.acolite.agentsdk.core.types.AgentOutputType;
 import ai.acolite.agentsdk.core.types.ResolvedAgentOutput;
 import ai.acolite.agentsdk.core.types.TextOutput;
@@ -11,10 +12,10 @@ import ai.acolite.agentsdk.exceptions.MaxTurnsExceededError;
 import ai.acolite.agentsdk.exceptions.ModelBehaviorError;
 import ai.acolite.agentsdk.exceptions.SystemError;
 import ai.acolite.agentsdk.exceptions.TimeoutError;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -160,6 +161,61 @@ public class Runner extends RunHooks<Object, TextOutput> {
         .build();
   }
 
+  static Throwable unwrap(Throwable error) {
+    Throwable current = error;
+    while ((current instanceof CompletionException || current instanceof ExecutionException)
+        && current.getCause() != null) {
+      current = current.getCause();
+    }
+    return current;
+  }
+
+  static final String INTERRUPTED_TOOL_RESULT =
+      "Tool execution was interrupted, possibly due to an internal error in the tool or the software process being interrupted.";
+
+  static List<AgentInputItem> completeToolPairs(List<RunItem> items) {
+    Map<String, RunToolCallOutputItem> outputByCall = new LinkedHashMap<>();
+    Set<String> callIds = new LinkedHashSet<>();
+    for (RunItem item : items) {
+      if (item instanceof RunToolCallItem call) {
+        if (call.getId() != null && !call.getId().isBlank()) {
+          callIds.add(call.getId());
+        }
+      } else if (item instanceof RunToolCallOutputItem output) {
+        outputByCall.putIfAbsent(output.getToolCallId(), output);
+      }
+    }
+
+    Set<String> emittedOutputs = new HashSet<>();
+    List<AgentInputItem> result = new ArrayList<>();
+    for (RunItem item : items) {
+      if (item instanceof RunToolCallItem call) {
+        String callId = call.getId();
+        if (callId == null || callId.isBlank()) continue;
+        result.add(call);
+        if (!outputByCall.containsKey(callId)) {
+          String name =
+              call.getName() == null || call.getName().isBlank()
+                  ? ""
+                  : " (%s)".formatted(call.getName());
+          result.add(
+              RunToolCallOutputItem.builder()
+                  .toolCallId(callId)
+                  .result(INTERRUPTED_TOOL_RESULT + name)
+                  .build());
+        }
+      } else if (item instanceof RunToolCallOutputItem output) {
+        String callId = output.getToolCallId();
+        if (!callIds.contains(callId)) continue;
+        if (!emittedOutputs.add(callId)) continue;
+        result.add(output);
+      } else {
+        result.add(item);
+      }
+    }
+    return result;
+  }
+
   /**
    * Executes a run with the given agent, input, and configuration.
    *
@@ -226,21 +282,32 @@ public class Runner extends RunHooks<Object, TextOutput> {
                     throw new SystemError("Run execution failed", error);
                   });
     }
-
     // Save new items to session after execution
-    return stateFuture.thenCompose(
-        finalState -> {
-          if (config.getSession() != null) {
-            List<ai.acolite.agentsdk.core.types.AgentInputItem> itemsToSave =
-                buildItemsToSave(input, finalState);
-            return config
-                .getSession()
-                .addItems(itemsToSave)
-                .thenCompose(v -> buildRunResultAsync(finalState, agent));
-          } else {
-            return buildRunResultAsync(finalState, agent);
-          }
-        });
+    return stateFuture
+        .handle(AbstractMap.SimpleEntry::new)
+        .thenCompose(
+            outcome -> {
+              if (outcome.getValue() == null) {
+                List<ai.acolite.agentsdk.core.types.AgentInputItem> itemsToSave =
+                    buildItemsToSave(input, outcome.getKey());
+                if (config.getSession() == null) {
+                  return buildRunResultAsync(outcome.getKey(), agent);
+                }
+                return config
+                    .getSession()
+                    .addItems(itemsToSave)
+                    .thenCompose(v -> buildRunResultAsync(outcome.getKey(), agent));
+              }
+              Throwable cause = unwrap(outcome.getValue());
+              if (config.getSession() == null) {
+                return CompletableFuture.failedFuture(cause);
+              }
+              List<AgentInputItem> partial = completeToolPairs(state.getGeneratedItems());
+              return config
+                  .getSession()
+                  .addErrorTurnGeneratedItems(partial, cause)
+                  .thenCompose(v -> CompletableFuture.failedFuture(cause));
+            });
   }
 
   /**
@@ -299,19 +366,29 @@ public class Runner extends RunHooks<Object, TextOutput> {
               s.incrementTurn();
               return s;
             });
-
     // Save new items to session after execution
-    if (config.getSession() != null) {
-      stateFuture =
-          stateFuture.thenCompose(
-              finalState -> {
-                List<ai.acolite.agentsdk.core.types.AgentInputItem> itemsToSave =
-                    buildItemsToSave(input, finalState);
+    return stateFuture
+        .handle(AbstractMap.SimpleEntry::new)
+        .thenCompose(
+            outcome -> {
+              if (outcome.getValue() == null) {
+                RunState<TContext, Agent<TContext, TOutput>> finalState = outcome.getKey();
+                if (config.getSession() == null) {
+                  return CompletableFuture.completedFuture(finalState);
+                }
+                List<AgentInputItem> itemsToSave = buildItemsToSave(input, finalState);
                 return config.getSession().addItems(itemsToSave).thenApply(v -> finalState);
-              });
-    }
-
-    return stateFuture;
+              }
+              Throwable cause = unwrap(outcome.getValue());
+              if (config.getSession() == null) {
+                return CompletableFuture.failedFuture(cause);
+              }
+              List<AgentInputItem> partial = completeToolPairs(state.getGeneratedItems());
+              return config
+                  .getSession()
+                  .addErrorTurnGeneratedItems(partial, cause)
+                  .thenCompose(v -> CompletableFuture.failedFuture(cause));
+            });
   }
 
   /**

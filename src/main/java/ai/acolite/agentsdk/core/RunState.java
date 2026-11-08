@@ -1,9 +1,12 @@
 package ai.acolite.agentsdk.core;
 
 import ai.acolite.agentsdk.core.runner.RunItemUtils;
+import ai.acolite.agentsdk.core.types.AgentInputItem;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -21,15 +24,17 @@ public class RunState<TContext, TAgent> {
   private final List<Object> originalInput;
   private final List<ModelResponse> modelResponses = new ArrayList<>();
   @Getter private final RunContext<TContext> context;
-  private final List<RunItem> generatedItems = new ArrayList<>();
+  private final List<RunItem> generatedItems = new CopyOnWriteArrayList<>();
   @Getter private final int maxTurns;
   @Getter private Optional<ModelResponse> lastTurnResponse = Optional.empty();
   @Getter private int currentTurn = 0;
+  @Getter RunConfig config;
 
   @SuppressWarnings("unchecked")
   public RunState(TAgent agent, List<Object> input, RunConfig config) {
     this.currentAgent = agent;
     this.originalInput = new ArrayList<>(input);
+    this.config = config;
     this.maxTurns = config.getEffectiveMaxTurns();
     this.context =
         config.getContext().map(ctx -> (RunContext<TContext>) ctx).orElse(new RunContext<>());

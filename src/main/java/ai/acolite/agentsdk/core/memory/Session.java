@@ -37,6 +37,18 @@ public interface Session {
   CompletableFuture<Void> addItems(List<AgentInputItem> items);
 
   /**
+   * add error turn generated items
+   *
+   * @param items List<AgentInputItem>
+   * @param throwable Throwable
+   * @return CompletableFuture<Void>
+   */
+  default CompletableFuture<Void> addErrorTurnGeneratedItems(
+      List<AgentInputItem> items, Throwable throwable) {
+    return CompletableFuture.completedFuture(null);
+  }
+
+  /**
    * popItem
    *
    * @return CompletableFuture<Optional<AgentInputItem>>
