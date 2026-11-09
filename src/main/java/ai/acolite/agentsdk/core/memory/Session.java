@@ -45,7 +45,7 @@ public interface Session {
    */
   default CompletableFuture<Void> addErrorTurnGeneratedItems(
       List<AgentInputItem> items, Throwable throwable) {
-    return CompletableFuture.completedFuture(null);
+    return this.addItems(items);
   }
 
   /**

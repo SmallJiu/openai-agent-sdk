@@ -61,7 +61,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
       CompletableFuture<RunResult<TContext, ?>> runAsync(
           Agent<TContext, TOutput> agent, String input) {
     RunConfig config = RunConfig.builder().build();
-    return new Runner().executeRun(agent, List.of(input), config);
+    return new Runner().executeRun(agent, inputItems(input), config);
   }
 
   /**
@@ -104,7 +104,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
   public static <TContext, TOutput extends AgentOutputType>
       CompletableFuture<RunResult<TContext, ?>> runAsync(
           Agent<TContext, TOutput> agent, String input, RunConfig config) {
-    return new Runner().executeRun(agent, List.of(input), config);
+    return new Runner().executeRun(agent, inputItems(input), config);
   }
 
   /**
@@ -126,6 +126,10 @@ public class Runner extends RunHooks<Object, TextOutput> {
     return runStreamed(agent, input, RunConfig.builder().build());
   }
 
+  private static List<Object> inputItems(String input) {
+    return input == null ? List.of() : List.of(input);
+  }
+
   /**
    * Static method to run an agent with streaming and custom configuration.
    *
@@ -140,8 +144,9 @@ public class Runner extends RunHooks<Object, TextOutput> {
       StreamedRunResult<TContext, Agent<TContext, TOutput>> runStreamed(
           Agent<TContext, TOutput> agent, String input, RunConfig config) {
     ReadableStreamImpl<RunStreamEvent> eventStream = new ReadableStreamImpl<>();
+    List<Object> initialInput = inputItems(input);
     CompletableFuture<RunState<TContext, Agent<TContext, TOutput>>> executionFuture =
-        new Runner().executeRunStreamed(agent, List.of(input), config, eventStream);
+        new Runner().executeRunStreamed(agent, initialInput, config, eventStream);
     executionFuture.whenComplete(
         (finalState, error) -> {
           if (error != null) {
@@ -152,12 +157,12 @@ public class Runner extends RunHooks<Object, TextOutput> {
         });
 
     RunState<TContext, Agent<TContext, TOutput>> initialState =
-        new RunState<>(agent, List.of(input), config);
+        new RunState<>(agent, initialInput, config);
     return StreamedRunResult.<TContext, Agent<TContext, TOutput>>builder()
         .state(initialState)
         .stream(eventStream)
         .executionFuture(executionFuture)
-        .input(List.of(input))
+        .input(initialInput)
         .build();
   }
 
@@ -168,66 +173,6 @@ public class Runner extends RunHooks<Object, TextOutput> {
       current = current.getCause();
     }
     return current;
-  }
-
-  static final String INTERRUPTED_TOOL_RESULT =
-      "Tool execution was interrupted, possibly due to an internal error in the tool or the software process being interrupted.";
-
-  static List<AgentInputItem> completeToolPairs(List<RunItem> items) {
-    Map<String, RunToolCallOutputItem> outputByCall = new LinkedHashMap<>();
-    Set<String> callIds = new LinkedHashSet<>();
-    for (RunItem item : items) {
-      if (item instanceof RunToolCallItem call) {
-        if (call.getId() != null && !call.getId().isBlank()) {
-          callIds.add(call.getId());
-        }
-      } else if (item instanceof RunToolCallOutputItem output) {
-        outputByCall.putIfAbsent(output.getToolCallId(), output);
-      }
-    }
-
-    Set<String> emittedOutputs = new HashSet<>();
-    List<AgentInputItem> result = new ArrayList<>();
-    for (RunItem item : items) {
-      if (item instanceof RunToolCallItem call) {
-        String callId = call.getId();
-        if (callId == null || callId.isBlank()) continue;
-        result.add(call);
-        if (!outputByCall.containsKey(callId)) {
-          String name =
-              call.getName() == null || call.getName().isBlank()
-                  ? ""
-                  : " (%s)".formatted(call.getName());
-          result.add(
-              RunToolCallOutputItem.builder()
-                  .toolCallId(callId)
-                  .result(INTERRUPTED_TOOL_RESULT + name)
-                  .build());
-        }
-      } else if (item instanceof RunToolCallOutputItem output) {
-        String callId = output.getToolCallId();
-        if (!callIds.contains(callId)) continue;
-        if (!emittedOutputs.add(callId)) continue;
-        result.add(output);
-      } else {
-        result.add(item);
-      }
-    }
-    return result;
-  }
-
-  private <TContext, TAgent>
-      List<ai.acolite.agentsdk.core.types.AgentInputItem> buildErrorItemsToSave(
-          List<Object> input, RunState<TContext, TAgent> finalState) {
-    List<ai.acolite.agentsdk.core.types.AgentInputItem> itemsToSave = new ArrayList<>();
-    for (Object inputItem : input) {
-      if (inputItem instanceof String) {
-        itemsToSave.add(
-            RunMessageInputItem.builder().content((String) inputItem).role("user").build());
-      }
-    }
-    itemsToSave.addAll(completeToolPairs(finalState.getGeneratedItems()));
-    return itemsToSave;
   }
 
   /**
@@ -261,6 +206,10 @@ public class Runner extends RunHooks<Object, TextOutput> {
               .join();
     } else {
       effectiveInput = input;
+    }
+    if (effectiveInput.isEmpty()) {
+      return CompletableFuture.failedFuture(
+          new IllegalArgumentException("Runner: input is empty and the session has no history"));
     }
 
     RunState<TContext, Agent<TContext, TOutput>> state =
@@ -316,7 +265,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
               if (config.getSession() == null) return CompletableFuture.failedFuture(cause);
               return config
                   .getSession()
-                  .addErrorTurnGeneratedItems(buildErrorItemsToSave(input, state), cause)
+                  .addErrorTurnGeneratedItems(buildItemsToSave(input, state), cause)
                   .thenCompose(v -> CompletableFuture.failedFuture(cause));
             });
   }
@@ -359,6 +308,10 @@ public class Runner extends RunHooks<Object, TextOutput> {
     } else {
       effectiveInput = input;
     }
+    if (effectiveInput.isEmpty()) {
+      return CompletableFuture.failedFuture(
+          new IllegalArgumentException("Runner: input is empty and the session has no history"));
+    }
 
     RunState<TContext, Agent<TContext, TOutput>> state =
         new RunState<>(agent, effectiveInput, config);
@@ -394,7 +347,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
               if (config.getSession() == null) return CompletableFuture.failedFuture(cause);
               return config
                   .getSession()
-                  .addErrorTurnGeneratedItems(buildErrorItemsToSave(input, state), cause)
+                  .addErrorTurnGeneratedItems(buildItemsToSave(input, state), cause)
                   .thenCompose(v -> CompletableFuture.failedFuture(cause));
             });
   }
@@ -1293,6 +1246,52 @@ public class Runner extends RunHooks<Object, TextOutput> {
         });
   }
 
+  static final String INTERRUPTED_TOOL_RESULT =
+      "Tool execution was interrupted, possibly due to an internal error in the tool or the software process being interrupted.";
+
+  static List<AgentInputItem> completeToolPairs(List<RunItem> items) {
+    Map<String, RunToolCallOutputItem> outputByCall = new LinkedHashMap<>();
+    Set<String> callIds = new LinkedHashSet<>();
+    for (RunItem item : items) {
+      if (item instanceof RunToolCallItem call) {
+        if (call.getId() != null && !call.getId().isBlank()) {
+          callIds.add(call.getId());
+        }
+      } else if (item instanceof RunToolCallOutputItem output) {
+        outputByCall.putIfAbsent(output.getToolCallId(), output);
+      }
+    }
+
+    Set<String> emittedOutputs = new HashSet<>();
+    List<AgentInputItem> result = new ArrayList<>();
+    for (RunItem item : items) {
+      if (item instanceof RunToolCallItem call) {
+        String callId = call.getId();
+        if (callId == null || callId.isBlank()) continue;
+        result.add(call);
+        if (!outputByCall.containsKey(callId)) {
+          String name =
+              call.getName() == null || call.getName().isBlank()
+                  ? ""
+                  : " (%s)".formatted(call.getName());
+          result.add(
+              RunToolCallOutputItem.builder()
+                  .toolCallId(callId)
+                  .result(INTERRUPTED_TOOL_RESULT + name)
+                  .build());
+        }
+      } else if (item instanceof RunToolCallOutputItem output) {
+        String callId = output.getToolCallId();
+        if (!callIds.contains(callId)) continue;
+        if (!emittedOutputs.add(callId)) continue;
+        result.add(output);
+      } else {
+        result.add(item);
+      }
+    }
+    return result;
+  }
+
   /**
    * Build list of items to save to session. Includes the user input message and all generated items
    * from the run.
@@ -1319,7 +1318,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
     }
 
     // Add all generated items (assistant messages, tool calls, tool outputs)
-    itemsToSave.addAll(finalState.getGeneratedItems());
+    itemsToSave.addAll(completeToolPairs(finalState.getGeneratedItems()));
 
     return itemsToSave;
   }
