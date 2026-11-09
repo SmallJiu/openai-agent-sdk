@@ -1,5 +1,7 @@
 package ai.acolite.agentsdk.core;
 
+import ai.acolite.agentsdk.core.contents.IAgentContent;
+import ai.acolite.agentsdk.core.contents.TextContent;
 import ai.acolite.agentsdk.core.runner.AsyncExecutor;
 import ai.acolite.agentsdk.core.runner.ResponseParser;
 import ai.acolite.agentsdk.core.runner.ToolExecutionUtils;
@@ -45,6 +47,11 @@ public class Runner extends RunHooks<Object, TextOutput> {
    */
   public static <TContext, TOutput extends AgentOutputType> RunResult<TContext, ?> run(
       Agent<TContext, TOutput> agent, String input) {
+    return run(agent, inputItems(input));
+  }
+
+  public static <TContext, TOutput extends AgentOutputType> RunResult<TContext, ?> run(
+      Agent<TContext, TOutput> agent, List<Object> input) {
     return runAsync(agent, input).join();
   }
 
@@ -60,6 +67,12 @@ public class Runner extends RunHooks<Object, TextOutput> {
   public static <TContext, TOutput extends AgentOutputType>
       CompletableFuture<RunResult<TContext, ?>> runAsync(
           Agent<TContext, TOutput> agent, String input) {
+    return runAsync(agent, inputItems(input));
+  }
+
+  public static <TContext, TOutput extends AgentOutputType>
+      CompletableFuture<RunResult<TContext, ?>> runAsync(
+          Agent<TContext, TOutput> agent, List<Object> input) {
     RunConfig config = RunConfig.builder().build();
     return new Runner().executeRun(agent, inputItems(input), config);
   }
@@ -76,6 +89,11 @@ public class Runner extends RunHooks<Object, TextOutput> {
    */
   public static <TContext, TOutput extends AgentOutputType> RunResult<TContext, ?> run(
       Agent<TContext, TOutput> agent, String input, RunConfig config) {
+    return run(agent, inputItems(input), config);
+  }
+
+  public static <TContext, TOutput extends AgentOutputType> RunResult<TContext, ?> run(
+      Agent<TContext, TOutput> agent, List<Object> input, RunConfig config) {
     try {
       return runAsync(agent, input, config).join();
     } catch (java.util.concurrent.CompletionException e) {
@@ -107,6 +125,18 @@ public class Runner extends RunHooks<Object, TextOutput> {
     return new Runner().executeRun(agent, inputItems(input), config);
   }
 
+  public static <TContext, TOutput extends AgentOutputType>
+      CompletableFuture<RunResult<TContext, ?>> runAsync(
+          Agent<TContext, TOutput> agent, List<Object> input, RunConfig config) {
+    return new Runner().executeRun(agent, inputItems(input), config);
+  }
+
+  public static <TContext, TOutput extends AgentOutputType>
+      StreamedRunResult<TContext, Agent<TContext, TOutput>> runStreamed(
+          Agent<TContext, TOutput> agent, String input) {
+    return runStreamed(agent, input, RunConfig.builder().build());
+  }
+
   /**
    * Static method to run an agent with streaming event emission.
    *
@@ -121,13 +151,14 @@ public class Runner extends RunHooks<Object, TextOutput> {
    */
   public static <TContext, TOutput extends AgentOutputType>
       StreamedRunResult<TContext, Agent<TContext, TOutput>> runStreamed(
-          Agent<TContext, TOutput> agent, String input) {
-
+          Agent<TContext, TOutput> agent, List<Object> input) {
     return runStreamed(agent, input, RunConfig.builder().build());
   }
 
-  private static List<Object> inputItems(String input) {
-    return input == null ? List.of() : List.of(input);
+  public static <TContext, TOutput extends AgentOutputType>
+      StreamedRunResult<TContext, Agent<TContext, TOutput>> runStreamed(
+          Agent<TContext, TOutput> agent, String input, RunConfig config) {
+    return runStreamed(agent, inputItems(input), config);
   }
 
   /**
@@ -142,7 +173,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
    */
   public static <TContext, TOutput extends AgentOutputType>
       StreamedRunResult<TContext, Agent<TContext, TOutput>> runStreamed(
-          Agent<TContext, TOutput> agent, String input, RunConfig config) {
+          Agent<TContext, TOutput> agent, List<Object> input, RunConfig config) {
     ReadableStreamImpl<RunStreamEvent> eventStream = new ReadableStreamImpl<>();
     List<Object> initialInput = inputItems(input);
     CompletableFuture<RunState<TContext, Agent<TContext, TOutput>>> executionFuture =
@@ -164,6 +195,14 @@ public class Runner extends RunHooks<Object, TextOutput> {
         .executionFuture(executionFuture)
         .input(initialInput)
         .build();
+  }
+
+  private static List<Object> inputItems(String input) {
+    return input == null ? List.of() : List.of(input);
+  }
+
+  private static List<Object> inputItems(List<Object> input) {
+    return input == null || input.isEmpty() ? List.of() : List.copyOf(input);
   }
 
   static Throwable unwrap(Throwable error) {
@@ -191,6 +230,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
   private <TContext, TOutput extends AgentOutputType>
       CompletableFuture<RunResult<TContext, ?>> executeRun(
           Agent<TContext, TOutput> agent, List<Object> input, RunConfig config) {
+    RunMessageInputItem item = convertToInputItem(input);
     List<Object> effectiveInput;
     if (config.getSession() != null) {
       effectiveInput =
@@ -200,12 +240,13 @@ public class Runner extends RunHooks<Object, TextOutput> {
               .thenApply(
                   history -> {
                     List<Object> combined = new ArrayList<>(history);
-                    combined.addAll(input);
+                    if (item != null) combined.add(item);
                     return combined;
                   })
               .join();
     } else {
-      effectiveInput = input;
+      if (item != null) effectiveInput = List.of(item);
+      else effectiveInput = input;
     }
     if (effectiveInput.isEmpty()) {
       return CompletableFuture.failedFuture(
@@ -292,6 +333,7 @@ public class Runner extends RunHooks<Object, TextOutput> {
           ReadableStreamImpl<RunStreamEvent> eventEmitter) {
 
     // Load session history if session is provided
+    RunMessageInputItem item = convertToInputItem(input);
     List<Object> effectiveInput;
     if (config.getSession() != null) {
       effectiveInput =
@@ -301,12 +343,13 @@ public class Runner extends RunHooks<Object, TextOutput> {
               .thenApply(
                   history -> {
                     List<Object> combined = new ArrayList<>(history);
-                    combined.addAll(input);
+                    if (item != null) combined.add(item);
                     return combined;
                   })
               .join();
     } else {
-      effectiveInput = input;
+      if (item != null) effectiveInput = List.of(item);
+      else effectiveInput = input;
     }
     if (effectiveInput.isEmpty()) {
       return CompletableFuture.failedFuture(
@@ -1292,6 +1335,28 @@ public class Runner extends RunHooks<Object, TextOutput> {
     return result;
   }
 
+  static RunMessageInputItem convertToInputItem(List<Object> input) {
+    if (input == null || input.isEmpty()) {
+      return null;
+    }
+    RunMessageInputItem pending = null;
+    // Add user input message(s)
+    for (Object inputItem : input) {
+      if (inputItem instanceof String) {
+        if (pending == null) pending = RunMessageInputItem.builder().role("user").build();
+        pending.getContents().add(TextContent.builder().content((String) inputItem).build());
+      } else if (inputItem instanceof IAgentContent content) {
+        if (pending == null) pending = RunMessageInputItem.builder().role("user").build();
+        pending.getContents().add(content);
+      } else if (inputItem instanceof ai.acolite.agentsdk.core.types.AgentInputItem) {
+        // If already an AgentInputItem (from history), skip it
+        // We only want to save NEW items from this run
+        continue;
+      }
+    }
+    return pending;
+  }
+
   /**
    * Build list of items to save to session. Includes the user input message and all generated items
    * from the run.
@@ -1306,15 +1371,9 @@ public class Runner extends RunHooks<Object, TextOutput> {
     List<ai.acolite.agentsdk.core.types.AgentInputItem> itemsToSave = new ArrayList<>();
 
     // Add user input message(s)
-    for (Object inputItem : input) {
-      if (inputItem instanceof String) {
-        itemsToSave.add(
-            RunMessageInputItem.builder().content((String) inputItem).role("user").build());
-      } else if (inputItem instanceof ai.acolite.agentsdk.core.types.AgentInputItem) {
-        // If already an AgentInputItem (from history), skip it
-        // We only want to save NEW items from this run
-        continue;
-      }
+    RunMessageInputItem pending = convertToInputItem(input);
+    if (pending != null) {
+      itemsToSave.add(pending);
     }
 
     // Add all generated items (assistant messages, tool calls, tool outputs)

@@ -1,5 +1,9 @@
 package ai.acolite.agentsdk.core;
 
+import ai.acolite.agentsdk.core.contents.IAgentContent;
+import java.util.ArrayList;
+import java.util.List;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.jackson.Jacksonized;
@@ -18,8 +22,10 @@ import lombok.extern.jackson.Jacksonized;
 @Jacksonized
 public class RunMessageInputItem extends RunItemBase {
   /** The message content from the user */
-  private final String content;
+  @Builder.Default private final String content = "";
 
   /** The role is always "user" for input messages */
   private final String role;
+
+  @Builder.Default private final List<IAgentContent> contents = new ArrayList<>();
 }

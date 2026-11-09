@@ -1,6 +1,7 @@
 package ai.acolite.agentsdk.openai;
 
 import ai.acolite.agentsdk.core.*;
+import ai.acolite.agentsdk.core.contents.IAgentContent;
 import com.openai.models.responses.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,10 +33,20 @@ public class ConversionUtils {
 
     for (Object item : items) {
       if (item instanceof RunMessageInputItem inputItem) {
+        ResponseInputItem.Message.Builder msg =
+            ResponseInputItem.Message.builder().role(ResponseInputItem.Message.Role.USER);
+        if (inputItem.getContents() != null && !inputItem.getContents().isEmpty()) {
+          for (IAgentContent content : inputItem.getContents()) {
+            msg.addContent(content.toInputContent());
+          }
+        } else {
+          msg.addInputTextContent(inputItem.getContent());
+        }
+        inputItems.add(ResponseInputItem.ofMessage(msg.build()));
         inputItems.add(
             ResponseInputItem.ofMessage(
                 ResponseInputItem.Message.builder()
-                    .addInputTextContent(inputItem.getContent())
+                    .addContent(content.toInputContent())
                     .role(ResponseInputItem.Message.Role.USER)
                     .build()));
       } else if (item instanceof String text) {
