@@ -43,6 +43,7 @@ public class ConversionUtils {
           msg.addInputTextContent(inputItem.getContent());
         }
         inputItems.add(ResponseInputItem.ofMessage(msg.build()));
+      } else if (item instanceof IAgentContent content) {
         inputItems.add(
             ResponseInputItem.ofMessage(
                 ResponseInputItem.Message.builder()
